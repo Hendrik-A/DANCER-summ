@@ -30,14 +30,6 @@ import numpy as np
 
 import torch
 
-from filelock import FileLock
-
-
-with FileLock(".lock") as lock:
-    nltk.download("punkt", quiet=True)
-
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
