@@ -26,28 +26,12 @@ import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
-import nltk  # Here to have a nice missing dependency error message early on
 import numpy as np
-from datasets import load_dataset, load_metric
 
 import torch
-import transformers
+
 from filelock import FileLock
-from transformers import (
-    AutoConfig,
-    AutoModelForSeq2SeqLM,
-    AutoTokenizer,
-    DataCollatorForSeq2Seq,
-    HfArgumentParser,
-    MBartTokenizer,
-    MBartTokenizerFast,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
-    default_data_collator,
-    set_seed,
-)
-from transformers.trainer_utils import get_last_checkpoint, is_main_process
-from transformers import EarlyStoppingCallback
+
 
 with FileLock(".lock") as lock:
     nltk.download("punkt", quiet=True)
@@ -309,20 +293,7 @@ def main():
     #
     # In distributed training, the load_dataset function guarantee that only one local process can concurrently
     # download the dataset.
-    if data_args.dataset_name is not None:
-        # Downloading and loading a dataset from the hub.
-        print("would load dataset")
-     #   datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name)
-    else:
-        dprint("detecting dataset name has gone wrong")
-    # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
-    # https://huggingface.co/docs/datasets/loading_datasets.html.
-
     
-    if data_args.task.startswith("summarization"):
-        # Get the column names for input/target.
-        print("task is summarization")
-    else:
         
 
     # Temporarily set max_target_length for training.
