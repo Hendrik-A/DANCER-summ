@@ -3,10 +3,7 @@ python src/run_summarization.py \
     --do_train \
     --do_eval \
     --task summarization \
-    --train_file /home/jupyter/pubmed-dataset/processed/pubmed/train.json \
-    --validation_file /home/jupyter/pubmed-dataset/processed/pubmed/val.json \
-    --text_column document \
-    --summary_column summary \
+    --dataset_name Hendrik-a\test \
     --output_dir dancer_pubmed_pre/models --logging_dir dancer_pubmed_pre/models/logs \
     --seed 100 \
     --per_device_train_batch_size=4 \
