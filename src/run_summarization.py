@@ -244,6 +244,7 @@ summarization_name_mapping = {
     "xglue": ("news_body", "news_title"),
     "xsum": ("document", "summary"),
     "wiki_summary": ("article", "highlights"),
+    "Hendrik-a/DANCER_data": ("document", "summary"),
 }
 
 
@@ -632,11 +633,21 @@ def main():
                     writer.write("\n".join(test_preds))
                     
     test_metrics = metrics
+
+    trainer.push_to_hub()
     
     del model, trainer
     gc.collect()
     torch.cuda.empty_cache()
 
+    print("******************Training metrics******************")
+    print("Type: ", type(train_metrics))
+    print(train_metrics)
+    print("******************Evaluation metrics******************")
+    print(eval_metrics)
+    print("******************Test metrics******************")
+    print(test_metrics)
+    
     return train_metrics, eval_metrics, test_metrics
 
 
