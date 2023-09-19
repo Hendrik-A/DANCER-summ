@@ -18,6 +18,6 @@ python src/run_summarization.py \
     --adafactor \
     --max_source_length 512 --max_target_length 128 --val_max_target_length 128 --pad_to_max_length \
     --num_beams 3 \
-    --num_train_epochs 1 --save_step 100 --save_total_limit 1 \
+    --num_train_epochs 1 --save_step 25 --save_total_limit 1 \
     --load_best_model_at_end \
-    --evaluation_strategy steps --eval_steps 100 --metric_for_best_model rouge2 --greater_is_better true
+    --evaluation_strategy steps --eval_steps 25 --metric_for_best_model rouge2 --greater_is_better true
