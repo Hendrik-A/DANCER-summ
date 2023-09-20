@@ -157,7 +157,7 @@ def main():
     test_df = valid_test_df.filter(~valid_test_df["article_id"].isin(list(valid_df.select(train_df.article_id).toPandas()['article_id'])))
 
     train_df.write.json(path=os.path.join(args.data_root, "train"), mode="overwrite")
-    test_df.write.json(path=os.path.join(arg.data_root, "test"), mode="overwrite")
+    test_df.write.json(path=os.path.join(args.data_root, "test"), mode="overwrite")
     valid_df.write.json(path=os.path.join(args.data_root, "val"), mode="overwrite")
 
     os.system('cat ' + args.data_root + '/train/part-* >' + args.data_root + '/train.txt')
