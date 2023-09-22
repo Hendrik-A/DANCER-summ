@@ -212,8 +212,6 @@ def main():
             .withColumn(
             "section_summary",
             collect_summary_udf(F.struct(F.col("section_idx"), F.col("matched_summaries")))) \
-            # comment it out for now, this information cannot be available for test dataset
-            # for train and val it is okay
             .where(
             F.size(F.col("section_summary")) > 0) \
             .withColumn(
