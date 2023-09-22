@@ -140,39 +140,6 @@ def read_args():
 
 def main():
     args, unknown = read_args()
-
-    conf = pyspark.SparkConf()
-    conf.set('spark.driver.memory', args.driver_memory)
-    sc = pyspark.SparkContext(conf=conf)
-    spark = pyspark.sql.SparkSession(sc)
-
-    """ Before reading in files, create split files from single file"""
-    orig_data = os.path.join(args.data_root, 'orig_test.txt')
-    df = spark.read.json(orig_data).orderBy(F.rand())
-    rows = df.count()
-
-    train_df = df.limit(round(rows*0.8))
-    valid_test_df = df.filter(~df["article_id"].isin(list(train_df.select(train_df.article_id).toPandas()['article_id'])))
-    valid_df = valid_test_df.limit(round(valid_test_df.count()*0.5))
-    test_df = valid_test_df.filter(~valid_test_df["article_id"].isin(list(valid_df.select(train_df.article_id).toPandas()['article_id'])))
-
-    train_df.write.json(path=os.path.join(args.data_root, "train"), mode="overwrite")
-    test_df.write.json(path=os.path.join(args.data_root, "test"), mode="overwrite")
-    valid_df.write.json(path=os.path.join(args.data_root, "val"), mode="overwrite")
-
-    os.system('cat ' + args.data_root + '/train/part-* >' + args.data_root + '/train.txt')
-    os.system('cat ' + args.data_root + '/val/part-* >' + args.data_root + '/val.txt')
-    os.system('cat ' + args.data_root + '/test/part-* >' + args.data_root + '/test.txt')
-
-    """ Clean up my creation of train, val, test files"""
-
-    os.system('rm -r ' + args.data_root + '/train')
-    os.system('rm -r ' + args.data_root + '/val')
-    os.system('rm -r ' + args.data_root + '/test')
-
-    del df, train_df, valid_df, test_df 
-
-    """ Continues as in original DANCER """
     
     train_data = os.path.join(args.data_root, 'train.txt')
     val_data = os.path.join(args.data_root, 'val.txt')
@@ -182,7 +149,10 @@ def main():
     metrics = ['rouge1', 'rouge2', 'rougeL']
     scorer = rouge_scorer.RougeScorer(metrics, use_stemmer=True)
 
-    
+    conf = pyspark.SparkConf()
+    conf.set('spark.driver.memory', args.driver_memory)
+    sc = pyspark.SparkContext(conf=conf)
+    spark = pyspark.sql.SparkSession(sc)
 
     data_prefixes = ['train', 'val', 'test']
     data_paths = [train_data, val_data, test_data]
