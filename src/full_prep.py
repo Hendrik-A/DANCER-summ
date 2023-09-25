@@ -182,7 +182,8 @@ def main():
         b_keywords = sc.broadcast(KEYWORDS)
 
         if prefix in ('test'):
-            df = df.withColumn(
+            df = df.drop("LEDtokens", "PXtokens") \
+                .withColumn(
                 'zipped_text',
                 F.arrays_zip(F.col('section_names'), F.col('sections'))) \
                 .withColumn(
