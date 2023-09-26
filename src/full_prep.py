@@ -157,7 +157,7 @@ def main():
     data_prefixes = ['train', 'val', 'test']
     data_paths = [train_data, val_data, test_data]
     task_output_dir = os.path.join(args.data_root, "processed", args.task)
-    log_dir = os.path.join(args.data_root, "log", args.task)
+    log_dir = os.path.join(args.data_root, "loggging", args.task)
     
     if not os.path.exists(task_output_dir):
         os.makedirs(task_output_dir)
