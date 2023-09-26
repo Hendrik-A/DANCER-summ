@@ -220,8 +220,16 @@ def main():
         
         df = df.withColumn(
             'section_id',
-            section_identify(b_keywords)('section_head')) \
-            .where(
+            section_identify(b_keywords)('section_head'))
+        
+        rm_types = df.select('article_id', 'section_head', 'section_id') \
+            .join(df.where(F.col("section_id").isin(selected_section_types)), ['article_id'], how='anti')
+
+        rm_types.write.json(
+            path=os.path.join(task_output_dir, prefix, 'rm_types'),
+            mode="overwrite")
+        
+        df = df.where(
             F.col("section_id").isin(selected_section_types)) \
             .withColumn(
             "document",
