@@ -269,7 +269,8 @@ def main():
             F.size(F.split(F.col("summary"), " ")))
 
         rm_doc_len = None
-        rm_doc_len = df.where(~F.col('document_len') > 50)
+        rm_doc_len = df.where(
+            ~F.col('document_len') > 50)
         rm_doc_len.write.json(path=types,mode="overwrite")       
         
         df = df.where(
