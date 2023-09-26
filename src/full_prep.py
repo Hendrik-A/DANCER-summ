@@ -181,7 +181,7 @@ def main():
 
         b_keywords = sc.broadcast(KEYWORDS)
 
-        df = df.drop("LEDtokens", "PXtokens")
+        df = df.drop("LEDtokens", "PXtokens") \
             .withColumn(
             'zipped_text',
             F.arrays_zip(F.col('section_names'), F.col('sections'))) \
