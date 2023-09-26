@@ -157,15 +157,14 @@ def main():
     data_prefixes = ['train', 'val', 'test']
     data_paths = [train_data, val_data, test_data]
     task_output_dir = os.path.join(args.data_root, "processed", args.task)
-    log_dir = os.path.join(args.data_root, "logging2", args.task)
+    log_dir = os.path.join(args.data_root, "log", args.task)
     
     if not os.path.exists(task_output_dir):
         os.makedirs(task_output_dir)
     
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    print("created task_output_dir and log_dir")
-    print("log_dir:", log_dir)
+        
     summary_match_udf = F.udf(summary_match, spark_types.ArrayType(spark_types.IntegerType()))
     index_array_udf = F.udf(
         index_array,
