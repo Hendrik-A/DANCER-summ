@@ -150,7 +150,7 @@ def main():
     scorer = rouge_scorer.RougeScorer(metrics, use_stemmer=True)
 
     conf = pyspark.SparkConf()
-    conf.set('spark.driver.memory', args.driver_memory, "spark.sql.analyzer.maxIterations", 200)
+    conf.set('spark.driver.memory', args.driver_memory)
     sc = pyspark.SparkContext(conf=conf)
     spark = pyspark.sql.SparkSession(sc)
 
@@ -270,7 +270,7 @@ def main():
 
         rm_doc_len = None
         rm_doc_len = df.where(
-            ~F.col('document_len') > 50)
+            F.col('document_len') <= 50)
         rm_doc_len.write.json(path=types,mode="overwrite")       
         
         df = df.where(
