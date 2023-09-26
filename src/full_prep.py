@@ -151,19 +151,16 @@ def main():
 
     conf = pyspark.SparkConf()
     conf.set('spark.driver.memory', args.driver_memory)
+    conf.set('spark.sql.optimizer.maxIterations', 500)
     sc = pyspark.SparkContext(conf=conf)
     spark = pyspark.sql.SparkSession(sc)
 
     data_prefixes = ['train', 'val', 'test']
     data_paths = [train_data, val_data, test_data]
     task_output_dir = os.path.join(args.data_root, "processed", args.task)
-    log_dir = os.path.join(args.data_root, "log", args.task)
-    
+
     if not os.path.exists(task_output_dir):
         os.makedirs(task_output_dir)
-    
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
         
     summary_match_udf = F.udf(summary_match, spark_types.ArrayType(spark_types.IntegerType()))
     index_array_udf = F.udf(
@@ -186,13 +183,13 @@ def main():
 
         b_keywords = sc.broadcast(KEYWORDS)
 
-        split_log = os.path.join(log_dir, prefix)
-        types = os.path.join(split_log, 'types')
-        doclen = os.path.join(split_log, 'doclen')
-        if not os.path.exists(types):
-            os.makedirs(types)
-        if not os.path.exists(doclen):
-            os.makedirs(doclen)        
+        types_log = os.path.join(args.data_root, 'logging/dancer', prefix, 'types')
+        len_log = os.path.join(args.data_root, 'logging/dancer', prefix, 'len')
+        
+        if not os.path.exists(types_log):
+            os.makedirs(types_log)
+        if not os.path.exists(len_log):
+            os.makedirs(len_log)        
 
         df = df.drop("LEDtokens", "PXtokens") \
             .withColumn(
@@ -234,15 +231,10 @@ def main():
         df = df.withColumn(
             'section_id',
             section_identify(b_keywords)('section_head'))
-
-
             
         rm_types = df.select('article_id', 'section_head', 'section_id') \
             .join(df.where(F.col("section_id").isin(selected_section_types)), ['article_id'], how='anti')
-
-        rm_types.write.json(
-            path=types,
-            mode="overwrite")
+        rm_types.write.json(path=types_log, mode="overwrite")
         
         df = df.where(
             F.col("section_id").isin(selected_section_types)) \
@@ -268,10 +260,9 @@ def main():
             "summary_len",
             F.size(F.split(F.col("summary"), " ")))
 
-        rm_doc_len = None
         rm_doc_len = df.where(
             F.col('document_len') <= 50)
-        rm_doc_len.write.json(path=types,mode="overwrite")       
+        rm_doc_len.write.json(path=len_log, mode="overwrite")       
         
         df = df.where(
             F.col('document_len') > 50) \
