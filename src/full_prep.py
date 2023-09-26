@@ -153,7 +153,6 @@ def main():
     conf.set('spark.driver.memory', args.driver_memory)
     sc = pyspark.SparkContext(conf=conf)
     spark = pyspark.sql.SparkSession(sc)
-    spark.sql.optimizer.maxIterations = 200
 
     data_prefixes = ['train', 'val', 'test']
     data_paths = [train_data, val_data, test_data]
