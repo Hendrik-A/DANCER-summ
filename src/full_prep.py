@@ -150,16 +150,21 @@ def main():
     scorer = rouge_scorer.RougeScorer(metrics, use_stemmer=True)
 
     conf = pyspark.SparkConf()
-    conf.set('spark.driver.memory', args.driver_memory)
+    conf.set('spark.driver.memory', args.driver_memory, "spark.sql.analyzer.maxIterations", 200)
     sc = pyspark.SparkContext(conf=conf)
     spark = pyspark.sql.SparkSession(sc)
 
     data_prefixes = ['train', 'val', 'test']
     data_paths = [train_data, val_data, test_data]
     task_output_dir = os.path.join(args.data_root, "processed", args.task)
+    log_dir = os.path.join(args.data_root, "log", args.task)
+    
     if not os.path.exists(task_output_dir):
         os.makedirs(task_output_dir)
-
+    
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
     summary_match_udf = F.udf(summary_match, spark_types.ArrayType(spark_types.IntegerType()))
     index_array_udf = F.udf(
         index_array,
@@ -180,6 +185,14 @@ def main():
             .repartition(args.partitions, "article_id")
 
         b_keywords = sc.broadcast(KEYWORDS)
+
+        split_log = os.path.join(log_dir, prefix)
+        types = os.path.join(split_log, 'types')
+        doclen = os.path.join(split_log, 'doclen')
+        if not os.path.exists(types):
+            os.makedirs(types)
+        if not os.path.exists(doclen):
+            os.makedirs(doclen)        
 
         df = df.drop("LEDtokens", "PXtokens") \
             .withColumn(
@@ -221,12 +234,14 @@ def main():
         df = df.withColumn(
             'section_id',
             section_identify(b_keywords)('section_head'))
-        
+
+
+            
         rm_types = df.select('article_id', 'section_head', 'section_id') \
             .join(df.where(F.col("section_id").isin(selected_section_types)), ['article_id'], how='anti')
 
         rm_types.write.json(
-            path=os.path.join(task_output_dir, prefix, 'rm_types'),
+            path=types,
             mode="overwrite")
         
         df = df.where(
@@ -251,8 +266,13 @@ def main():
             F.size(F.split(F.col("document"), " "))) \
             .withColumn(
             "summary_len",
-            F.size(F.split(F.col("summary"), " "))) \
-            .where(
+            F.size(F.split(F.col("summary"), " ")))
+
+        rm_doc_len = None
+        rm_doc_len = df.where(~F.col('document_len') > 50)
+        rm_doc_len.write.json(path=types,mode="overwrite")       
+        
+        df = df.where(
             F.col('document_len') > 50) \
             .select(
             "article_id",
