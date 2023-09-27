@@ -191,8 +191,7 @@ def main():
         if not os.path.exists(len_log):
             os.makedirs(len_log)        
 
-        df = df.drop("LEDtokens", "PXtokens") \
-            .withColumn(
+        df = df.withColumn(
             'zipped_text',
             F.arrays_zip(F.col('section_names'), F.col('sections'))) \
             .withColumn(
