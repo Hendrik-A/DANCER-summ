@@ -25,6 +25,7 @@ import gc
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
+from typing import Dict #HA: add this import for writing my own compute_objective function
 
 import nltk  # Here to have a nice missing dependency error message early on
 import numpy as np
@@ -47,7 +48,15 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
-from transformers import EarlyStoppingCallback
+#HA: no ES used, HP search takes care of this
+#from transformers import EarlyStoppingCallback
+
+#HA: add these for Ray Tune Hyperparameter search
+import ray
+from ray import tune
+from ray.tune.schedulers import PopulationBasedTraining
+from ray.tune import CLIReporter
+
 
 with FileLock(".lock") as lock:
     nltk.download("punkt", quiet=True)
@@ -244,6 +253,8 @@ summarization_name_mapping = {
     "xglue": ("news_body", "news_title"),
     "xsum": ("document", "summary"),
     "wiki_summary": ("article", "highlights"),
+    #HA: add dataset with columns
+    "Hendrik-a/DANCER-data": {"document", "summary"},
 }
 
 
@@ -252,6 +263,8 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
+    """ do I use any of the Seq2SeqTrainingArguments or everything with via HP search?"""
+    
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, Seq2SeqTrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
@@ -344,6 +357,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
+    """ Probably dont need that - have to check if it is necessary for config or any other way """
     model = AutoModelForSeq2SeqLM.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -353,6 +367,13 @@ def main():
         use_auth_token=True if model_args.use_auth_token else None,
     )
 
+    def model_init(trial):
+        """ add decoder_start_token_id from below ? do I need it ? """
+        return AutoModelForSeq2SeqLM.from_pretrained(
+            model_args.model_name_or_path
+        )
+
+    """ can this be part of model_init """
     # Set decoder_start_token_id
     if model.config.decoder_start_token_id is None and isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
         assert (
@@ -493,6 +514,7 @@ def main():
             load_from_cache_file=not data_args.overwrite_cache,
         )
 
+    """ cant do do predict with raytune? so this isnt needed?"""
     if training_args.do_predict:
         max_target_length = data_args.val_max_target_length
         if "test" not in datasets:
@@ -515,7 +537,8 @@ def main():
     else:
         data_collator = DataCollatorForSeq2Seq(
             tokenizer,
-            model=model,
+            #HA: model is instantiated for each trial not at beginning 
+            #model=model,
             label_pad_token_id=label_pad_token_id,
             pad_to_multiple_of=8 if training_args.fp16 else None,
         )
@@ -563,18 +586,58 @@ def main():
         result = {k: round(v, 4) for k, v in result.items()}
         return result
 
-    es_callback = EarlyStoppingCallback(early_stopping_patience=3)
+    #HA: add this compute_objective function to score trials based on single metric
+    
+    def rouge_objective(metrics: Dict[str, float]) -> float:
+        return metrics['eval_rouge2']
+    
+    #HA: no ES callback used, HP search takes care of this
+    #es_callback = EarlyStoppingCallback(early_stopping_patience=3)
+
+    """ training_args = Seq2SeqTrainingArguments() """
+    """ use parser or set arguments hard coded? """
+    
     # Initialize our Trainer
     trainer = Seq2SeqTrainer(
-        model=model,
+        #HA: model is instantiated for each trial, so no model specified here, instead model_init
+        #model=model,
+        model_init=model_init,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        compute_metrics=compute_metrics if training_args.predict_with_generate else None,
-        callbacks=[es_callback]
+        compute_metrics=compute_metrics if training_args.predict_with_generate else None
+        #HA: no ES used, HP search takes care of this logic
+        #callbacks=[es_callback]
     )
+
+    """ """
+    tune_config = {
+        "hyper parameter": "value",
+    }
+
+    scheduler = PopulationBasedTraining(
+        time_attr="training_iteration",
+        metric="eval_rouge2",
+        mode="max",
+        perturbation_interval=1,
+        hyperparameter_mutations={
+            "hyperParameter": "value",
+        }
+    )
+
+    reporter = CLIReporter(
+        parameter_columns={
+            "weight_decay": "w_decay",
+            "learning_rate": "lr",
+            "per_device_train_batch_size": "train_bs/gpu",
+            "num_train_epochs": "num_epochs",
+        },
+        metric_columns=["eval_rouge1", "eval_rouge2", "eval_rougeL", "eval_rougeLsum", "Gen Len"],
+    )
+
+    """ need to rewrite this part heavily to work with raytune """
     
     # Training
     if training_args.do_train:
